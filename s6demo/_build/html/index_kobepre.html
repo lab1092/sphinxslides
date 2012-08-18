@@ -1,0 +1,503 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Sphinx朝会やるよ!!</title>
+    
+    <link rel="stylesheet" href="_static/s6.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+<script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/jquery.touchwipe.min.js"></script>
+<script type="text/javascript" src="_static/s6.js"></script>
+<script type="text/javascript">
+// <![CDATA[
+
+var bodyStyle = {
+    width: '100%',
+    height: '100%',
+    padding: '0',
+    margin: '0',
+    overflow: 'hidden',
+    backgroundColor: 'white',
+};
+
+s6.css('html', bodyStyle);
+s6.css('body', bodyStyle);
+s6.css('.s6 .page.default > h2', {margin:'0'});
+
+function calcMetrics(options) {
+    var html = document.documentElement;
+    var options = s6.opts(options, {
+        width: html.offsetWidth,
+        height: html.offsetHeight,
+        ratio: 0.75,
+        fontSize: 0.1
+    });
+    var left = 0;
+    var top = 0;
+    var width = options.width;
+    var height = options.height;
+
+    if (height / width < options.ratio) {
+        var originalWidth = width;
+        width = height / options.ratio;
+        left = (originalWidth - width) / 2;
+    }
+    else {
+        var originalHeight = height;
+        height = width * options.ratio;
+        top = (originalHeight - height) / 2;
+    }
+
+    return {
+        left: left,
+        top: top,
+        width: width,
+        height: height,
+        fontSize: height * options.fontSize
+    }
+}
+
+var pr;
+s6.attach(s6, 'ready', function ready() {
+    var fontSize = 0.08;
+    var html = document.documentElement;
+    var metrics = calcMetrics({fontSize: fontSize});
+    var startIndex = 0;
+
+    var result;
+    if (location.hash) {
+        startIndex = $('.section').index($(location.hash));
+        if(startIndex < 0) {
+            startIndex = 0;
+        }
+    }
+
+    var container = $('.section')[0];
+    pr = new s6.Presentation({
+            thema: 'sphinx',
+            element: container,
+            width: metrics.width,
+            height: metrics.height,
+            startIndex: startIndex,
+            fontSize: fontSize
+        });
+    pr.style.left = metrics.left + 'px';
+    pr.style.top = metrics.top + 'px';
+    pr.start();
+
+    var indexNoOutline = false;
+
+    pr.funcPages.index.attachPage('click', function(i, element, wrapper) {
+        indexNoOutline = true;
+        setTimeout(function() {
+            indexNoOutline =false
+        }, 1000);
+        wrapper.style.background = '';
+        pr.go(i);
+    });
+
+    pr.funcPages.index.attachPage('mouseover', function(i, element, wrapper) {
+        if (indexNoOutline) return;
+        wrapper.className += ' selected';
+    });
+    
+    pr.funcPages.index.attachPage('mouseout', function(i, element, wrapper) {
+        wrapper.className = 'wrapper';
+    });
+
+    try {
+        var isIframe = !(window.parent == window);
+    } catch(e) {
+        isIframe = true;
+    }
+
+    // add navigation overlay
+    function createNaviArea(id, options){
+        var opts = s6.opts(options, {
+            widthRatio: 1.0,
+            heightRatio: 1.0,
+            dockTo: 'top',
+            label: ''
+        });
+        function calcNaviMetrics(){
+            var html = document.documentElement;
+            var metrics = calcMetrics({fontSize: fontSize});
+            var naviAreaWidth = ((html.offsetWidth - metrics.width) / 2 + (metrics.width * opts.widthRatio));
+            var naviAreaHeight = ((html.offsetHeight - metrics.height) / 2 + (metrics.height * opts.heightRatio));
+            var width = (opts.widthRatio >= 1.0)? html.offsetWidth: naviAreaWidth;
+            var height = (opts.heightRatio >= 1.0)? html.offsetHeight: naviAreaHeight;
+            var left = 0;
+            var top = 0;
+            if(opts.dockTo == 'right') {
+                left = html.offsetWidth - width;
+            }
+            else if(opts.dockTo == 'bottom') {
+                top = html.offsetHeight - height;
+            }
+            return {
+                width: width,
+                height: height,
+                left: left,
+                top: top
+            };
+        }
+        function setMetrics(elem, metrics) {
+            elem.css('position', 'absolute')
+                .css('left',  metrics.left + 'px')
+                .css('top',  metrics.top + 'px')
+                .css('width',  metrics.width + 'px')
+                .css('height',  metrics.height + 'px');
+            return elem;
+        }
+        var naviMetrics = calcNaviMetrics();
+        var elem = $('<div>', {id: id, class: 'navigation-area-'+opts.dockTo});
+        setMetrics(elem, naviMetrics);
+        var label = $('<span>')
+            .css('line-height', naviMetrics.height + 'px')
+            .text(opts.label);
+        elem.append(label);
+        $(window).resize(function(){
+            var naviMetrics = calcNaviMetrics();
+            setMetrics(elem, naviMetrics);
+            label.css('line-height', naviMetrics.height + 'px')
+        });
+        return elem;
+    }
+    var naviIdx  = createNaviArea('idxpage', {heightRatio: 0.1, dockTo: 'top', label: 'index'});
+    var naviBack = createNaviArea('backpage', {heightRatio: 0.1, dockTo: 'bottom', label: 'back'});
+    var naviNext = createNaviArea('nextpage', {widthRatio: 0.1, dockTo: 'right', label: '≫'});
+    var naviPrev = createNaviArea('prevpage', {widthRatio: 0.1, dockTo: 'left', label: '≪'});
+    s6.attach(naviIdx[0],  'click', function() { pr.go('index') });
+    s6.attach(naviBack[0], 'click', 'back', 0, pr);
+    s6.attach(naviNext[0], 'click', 'step', 0, pr);
+    s6.attach(naviPrev[0], 'click', 'prev', 0, pr);
+    $('div.document')
+        .append(naviIdx)
+        .append(naviBack)
+        .append(naviNext)
+        .append(naviPrev);
+
+    // setup mouse events
+    s6.attach(document, 'click', 'step', 0, pr);
+    s6.attach(document, 'keypress Right', 'step', 0, pr);
+    s6.attach(document, 'keypress Left',  'prev', 0, pr);
+    s6.attach(document, 'keypress Up',    function() { pr.go('index') });
+    s6.attach(document, 'keypress Down',  'back', 0, pr);
+
+    // inject 'target=_blank' to link-targets.
+    // prevent paging if click link-target.
+    var clickGuard = function(evt){
+        pr.busy = true;
+        setTimeout(function(){pr.busy = false;}, 1000);
+        return true;
+    }
+    $('a[href]')
+        .attr('target', '_blank')
+        .click(clickGuard)
+        .mousedown(clickGuard)
+        .mouseup(clickGuard)
+        .bind('contextmenu', clickGuard);
+
+    // setup swipe events
+    if($(document).touchwipe) {
+        var wipeSetting = {
+            wipeLeft: function(){ pr.step(); },
+            wipeRight: function(){ pr.prev(); },
+            wipeUp: function(){ pr.go('index'); },
+            wipeDown: function(){ pr.back(); },
+            preventDefaultEvent: true
+        }
+        $(document).touchwipe(wipeSetting);
+        $(pr.element).touchwipe(wipeSetting);
+    }
+
+    // resize window
+    $(window).resize(function(){
+        var html = document.documentElement;
+        var metrics = calcMetrics({fontSize: fontSize});
+        pr.style.left = metrics.left + 'px';
+        pr.style.top = metrics.top + 'px';
+        pr.style.width = metrics.width + 'px';
+        pr.style.height = metrics.height + 'px';
+        pr.style.fontSize = metrics.fontSize + 'px';
+    });
+
+    // handle page number and set to href
+    pr._go  = pr.go;
+    pr.go = function(toIndex) {
+        pr._go(toIndex);
+        if(pr.getPage(toIndex)) {
+            location.href = '#' + $(".section")[toIndex].id; //want to set at paging.
+        }
+    }
+});
+// ]]>
+</script>
+
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="index.html">s6demo 1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body">
+            
+  <div class="section" id="sphinx">
+<h1>Sphinx朝会やるよ!!<a class="headerlink" href="#sphinx" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>Sphinx朝会って?<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>Sphinx朝会とは</p>
+<ul class="simple">
+<li><strong>Sphinx初心者向け</strong> の</li>
+<li>&#8216;make html&#8217;を体験するための</li>
+<li>勉強会みたいなもの</li>
+</ul>
+<p>です。</p>
+</div>
+<div class="section" id="id2">
+<h2>今回で3回目。<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<p>今回で3回目の実施です。</p>
+<ul class="simple">
+<li>第一回:兵庫・神戸</li>
+<li>第二回:大阪・十三</li>
+<li><strong>第三回:兵庫・神戸</strong> ←イマココ</li>
+</ul>
+</div>
+<div class="section" id="id3">
+<h2>いつやるの?(開催情報)<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">日時:</th><td class="field-body">2012/03/04 10:00 to 12:00</td>
+</tr>
+<tr class="field-even field"><th class="field-name">会場:</th><td class="field-body">神戸市立婦人会館 4階 たんぽぽ</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">URL:</th><td class="field-body"><a class="reference external" href="http://atnd.org/events/25549">http://atnd.org/events/25549</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Hashtag:</th><td class="field-body">#sphinxjp</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="id4">
+<h2>何をやるの?<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<p>基本的に前回二回と内容は同じです。</p>
+<ul class="simple">
+<li>Sphinxの環境を作る</li>
+<li>はじめての&#8217;make html&#8217;</li>
+<li>演習問題で学習する</li>
+</ul>
+</div>
+<div class="section" id="id5">
+<h2>Sphinxについて<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {h2: {fontSize:'100%', textAlign:'center', margin:'30% auto'}}});}</script>
+</div>
+<div class="section" id="id6">
+<h2>Sphinxとは何か？<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>ドキュメント生成のツール</li>
+<li>reStructuredText記法(Wikiっぽい?</li>
+<li>ページ間のリンクを自動生成</li>
+<li>強力なコードハイライト</li>
+<li>HTML, PDF, ePub, htmlhelp, latex, man...</li>
+</ul>
+</div>
+<div class="section" id="restructuredtext">
+<h2>reStructuredText記法って?<a class="headerlink" href="#restructuredtext" title="Permalink to this headline">¶</a></h2>
+<p>シンプルなテキストマークアップです。</p>
+<div class="highlight-rst"><div class="highlight"><pre><span class="gh">Sphinxとは何か？</span>
+<span class="gh">-----------------</span>
+<span class="m">*</span> ドキュメント生成のツール
+<span class="m">*</span> reStructuredText記法(Wikiっぽい?
+<span class="m">*</span> ページ間のリンクを自動生成
+<span class="m">*</span> 強力なコードハイライト
+<span class="m">*</span> HTML, PDF, ePub, htmlhelp, latex, man...
+</pre></div>
+</div>
+</div>
+<div class="section" id="id7">
+<h2>何が嬉しい?<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<p>Sphinxでドキュメントを書くと…</p>
+<ul class="simple">
+<li>テキストエディタでサクサク書ける</li>
+<li>文書の構造を保ってシンプルに書ける</li>
+<li>強力なSphinx拡張も使える</li>
+<li>様々なOSで動作</li>
+</ul>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {'ul/li': {display:'none'}}});}</script>
+<script>
+if(typeof s6 != 'undefined'){s6.page({actions: [['ul/li[0]', 'fade in', '0.3'],
+['ul/li[1]', 'fade in', '0.3'],
+['ul/li[2]', 'fade in', '0.3'],
+['ul/li[3]', 'fade in', '0.3']]});}</script>
+</div>
+<div class="section" id="id8">
+<h2>テキストエディタでサクサク<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<p>何せテキストなので、</p>
+<ul class="simple">
+<li>GitなどのVCSで管理可能</li>
+<li>コピペし放題（?）</li>
+<li>テキストエディタ上の見栄えが崩れにくいマークアップ</li>
+</ul>
+</div>
+<div class="section" id="id9">
+<h2>シンプルに書ける<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>マークアップはシンプル。</li>
+<li>インデントと改行が文書構造を表現</li>
+</ul>
+</div>
+<div class="section" id="id10">
+<h2>強力なSphinx拡張<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h2>
+<p>reSTructuredTextでなく、 <strong>Sphinx</strong> である必要。</p>
+<ul class="simple">
+<li>コードハイライト(pygments)</li>
+<li>拡張テーマ(bizstyle,S6,etc...)</li>
+<li>blockdiag等</li>
+</ul>
+</div>
+<div class="section" id="id11">
+<h2>Sphinxインストール方法<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h2>
+<p>Pythonがインストールされている環境で</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>easy_install sphinx
+</pre></div>
+</div>
+<p>あとは適当にディレクトリ作って…</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>sphinx-quickstart
+</pre></div>
+</div>
+</div>
+<div class="section" id="make-html">
+<h2>&#8216;make html&#8217;<a class="headerlink" href="#make-html" title="Permalink to this headline">¶</a></h2>
+<p>HTMLを作成するのに&#8217;make html&#8217;ってやります。</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">html:</th><td class="field-body">HTMLを作成します</td>
+</tr>
+<tr class="field-even field"><th class="field-name">epub:</th><td class="field-body">EPUBを作成します</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">pdf:</th><td class="field-body">PDFを作成します(要追加設定)</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="sphinx-usres-jp">
+<h2>情報も充実のSphinx-Usres.jp。<a class="headerlink" href="#sphinx-usres-jp" title="Permalink to this headline">¶</a></h2>
+<p>日本のコミュニティが活発。</p>
+<ul>
+<li><dl class="first docutils">
+<dt>ユーザーグループのページ</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://sphinx-users.jp/">http://sphinx-users.jp/</a></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>メーリングリスト</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://www.python.jp/mailman/listinfo/sphinx-users">http://www.python.jp/mailman/listinfo/sphinx-users</a></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="twitter">
+<h2>Twitterでも<a class="headerlink" href="#twitter" title="Permalink to this headline">¶</a></h2>
+<p>#sphinxjp ハッシュタグを付けてつぶやいてみてください。</p>
+</div>
+<div class="section" id="id12">
+<h2>その気になれば議事録的なものも<a class="headerlink" href="#id12" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="http://dl.dropbox.com/u/3864210/golang_kobe1.html">http://dl.dropbox.com/u/3864210/golang_kobe1.html</a></li>
+<li><a class="reference external" href="http://dl.dropbox.com/u/3864210/Concrete5_4.html">http://dl.dropbox.com/u/3864210/Concrete5_4.html</a></li>
+<li><a class="reference external" href="http://dl.dropbox.com/u/3864210/Concrete5_5.html">http://dl.dropbox.com/u/3864210/Concrete5_5.html</a></li>
+</ul>
+</div>
+<div class="section" id="id13">
+<h2>Sphinxの人気!!<a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Blender Python API Document</p>
+</li>
+<li><p class="first">CakePHP2.x と Symfony2、PHPフレームワークのドキュメントに採用(CodeIgniterさん…)</p>
+</li>
+<li><p class="first">岡山Javaユーザ会</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference external" href="http://sphinx.pocoo.org/examples.html">http://sphinx.pocoo.org/examples.html</a></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="id14">
+<h2>大事なので2回いいます(開催情報)<a class="headerlink" href="#id14" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">日時:</th><td class="field-body">2012/03/04 10:00 to 12:00</td>
+</tr>
+<tr class="field-even field"><th class="field-name">会場:</th><td class="field-body">神戸市立婦人会館 4階 たんぽぽ</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">URL:</th><td class="field-body"><a class="reference external" href="http://atnd.org/events/25549">http://atnd.org/events/25549</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Hashtag:</th><td class="field-body">#sphinxjp</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="thanks-for-watching">
+<h2>Thanks for watching!!<a class="headerlink" href="#thanks-for-watching" title="Permalink to this headline">¶</a></h2>
+<p>ホントはBlenderやりたいんだよね…</p>
+<div align='center'><iframe width="560" height="315" src="http://www.youtube.com/embed/Z8cUMsQFHp4" frameborder="0" allowfullscreen></iframe></div></div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="index.html">s6demo 1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+<div class="footer">
+    <span>Sphinx朝会やるよ!! :: 2012, na</span><br />
+    <span class="hidden">操作方法: 上下左右キーで操作です</span>
+</div>
+
+  </body>
+</html>

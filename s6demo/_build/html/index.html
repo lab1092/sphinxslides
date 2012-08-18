@@ -1,0 +1,488 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>西のほうで「Sphinx朝会」やってきたのさ</title>
+    
+    <link rel="stylesheet" href="_static/s6.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+<script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/jquery.touchwipe.min.js"></script>
+<script type="text/javascript" src="_static/s6.js"></script>
+<script type="text/javascript">
+// <![CDATA[
+
+var bodyStyle = {
+    width: '100%',
+    height: '100%',
+    padding: '0',
+    margin: '0',
+    overflow: 'hidden',
+    backgroundColor: 'white',
+};
+
+s6.css('html', bodyStyle);
+s6.css('body', bodyStyle);
+s6.css('.s6 .page.default > h2', {margin:'0'});
+
+function calcMetrics(options) {
+    var html = document.documentElement;
+    var options = s6.opts(options, {
+        width: html.offsetWidth,
+        height: html.offsetHeight,
+        ratio: 0.75,
+        fontSize: 0.1
+    });
+    var left = 0;
+    var top = 0;
+    var width = options.width;
+    var height = options.height;
+
+    if (height / width < options.ratio) {
+        var originalWidth = width;
+        width = height / options.ratio;
+        left = (originalWidth - width) / 2;
+    }
+    else {
+        var originalHeight = height;
+        height = width * options.ratio;
+        top = (originalHeight - height) / 2;
+    }
+
+    return {
+        left: left,
+        top: top,
+        width: width,
+        height: height,
+        fontSize: height * options.fontSize
+    }
+}
+
+var pr;
+s6.attach(s6, 'ready', function ready() {
+    var fontSize = 0.08;
+    var html = document.documentElement;
+    var metrics = calcMetrics({fontSize: fontSize});
+    var startIndex = 0;
+
+    var result;
+    if (location.hash) {
+        startIndex = $('.section').index($(location.hash));
+        if(startIndex < 0) {
+            startIndex = 0;
+        }
+    }
+
+    var container = $('.section')[0];
+    pr = new s6.Presentation({
+            thema: 'sphinx',
+            element: container,
+            width: metrics.width,
+            height: metrics.height,
+            startIndex: startIndex,
+            fontSize: fontSize
+        });
+    pr.style.left = metrics.left + 'px';
+    pr.style.top = metrics.top + 'px';
+    pr.start();
+
+    var indexNoOutline = false;
+
+    pr.funcPages.index.attachPage('click', function(i, element, wrapper) {
+        indexNoOutline = true;
+        setTimeout(function() {
+            indexNoOutline =false
+        }, 1000);
+        wrapper.style.background = '';
+        pr.go(i);
+    });
+
+    pr.funcPages.index.attachPage('mouseover', function(i, element, wrapper) {
+        if (indexNoOutline) return;
+        wrapper.className += ' selected';
+    });
+    
+    pr.funcPages.index.attachPage('mouseout', function(i, element, wrapper) {
+        wrapper.className = 'wrapper';
+    });
+
+    try {
+        var isIframe = !(window.parent == window);
+    } catch(e) {
+        isIframe = true;
+    }
+
+    // add navigation overlay
+    function createNaviArea(id, options){
+        var opts = s6.opts(options, {
+            widthRatio: 1.0,
+            heightRatio: 1.0,
+            dockTo: 'top',
+            label: ''
+        });
+        function calcNaviMetrics(){
+            var html = document.documentElement;
+            var metrics = calcMetrics({fontSize: fontSize});
+            var naviAreaWidth = ((html.offsetWidth - metrics.width) / 2 + (metrics.width * opts.widthRatio));
+            var naviAreaHeight = ((html.offsetHeight - metrics.height) / 2 + (metrics.height * opts.heightRatio));
+            var width = (opts.widthRatio >= 1.0)? html.offsetWidth: naviAreaWidth;
+            var height = (opts.heightRatio >= 1.0)? html.offsetHeight: naviAreaHeight;
+            var left = 0;
+            var top = 0;
+            if(opts.dockTo == 'right') {
+                left = html.offsetWidth - width;
+            }
+            else if(opts.dockTo == 'bottom') {
+                top = html.offsetHeight - height;
+            }
+            return {
+                width: width,
+                height: height,
+                left: left,
+                top: top
+            };
+        }
+        function setMetrics(elem, metrics) {
+            elem.css('position', 'absolute')
+                .css('left',  metrics.left + 'px')
+                .css('top',  metrics.top + 'px')
+                .css('width',  metrics.width + 'px')
+                .css('height',  metrics.height + 'px');
+            return elem;
+        }
+        var naviMetrics = calcNaviMetrics();
+        var elem = $('<div>', {id: id, class: 'navigation-area-'+opts.dockTo});
+        setMetrics(elem, naviMetrics);
+        var label = $('<span>')
+            .css('line-height', naviMetrics.height + 'px')
+            .text(opts.label);
+        elem.append(label);
+        $(window).resize(function(){
+            var naviMetrics = calcNaviMetrics();
+            setMetrics(elem, naviMetrics);
+            label.css('line-height', naviMetrics.height + 'px')
+        });
+        return elem;
+    }
+    var naviIdx  = createNaviArea('idxpage', {heightRatio: 0.1, dockTo: 'top', label: 'index'});
+    var naviBack = createNaviArea('backpage', {heightRatio: 0.1, dockTo: 'bottom', label: 'back'});
+    var naviNext = createNaviArea('nextpage', {widthRatio: 0.1, dockTo: 'right', label: '≫'});
+    var naviPrev = createNaviArea('prevpage', {widthRatio: 0.1, dockTo: 'left', label: '≪'});
+    s6.attach(naviIdx[0],  'click', function() { pr.go('index') });
+    s6.attach(naviBack[0], 'click', 'back', 0, pr);
+    s6.attach(naviNext[0], 'click', 'step', 0, pr);
+    s6.attach(naviPrev[0], 'click', 'prev', 0, pr);
+    $('div.document')
+        .append(naviIdx)
+        .append(naviBack)
+        .append(naviNext)
+        .append(naviPrev);
+
+    // setup mouse events
+    s6.attach(document, 'click', 'step', 0, pr);
+    s6.attach(document, 'keypress Right', 'step', 0, pr);
+    s6.attach(document, 'keypress Left',  'prev', 0, pr);
+    s6.attach(document, 'keypress Up',    function() { pr.go('index') });
+    s6.attach(document, 'keypress Down',  'back', 0, pr);
+
+    // inject 'target=_blank' to link-targets.
+    // prevent paging if click link-target.
+    var clickGuard = function(evt){
+        pr.busy = true;
+        setTimeout(function(){pr.busy = false;}, 1000);
+        return true;
+    }
+    $('a[href]')
+        .attr('target', '_blank')
+        .click(clickGuard)
+        .mousedown(clickGuard)
+        .mouseup(clickGuard)
+        .bind('contextmenu', clickGuard);
+
+    // setup swipe events
+    if($(document).touchwipe) {
+        var wipeSetting = {
+            wipeLeft: function(){ pr.step(); },
+            wipeRight: function(){ pr.prev(); },
+            wipeUp: function(){ pr.go('index'); },
+            wipeDown: function(){ pr.back(); },
+            preventDefaultEvent: true
+        }
+        $(document).touchwipe(wipeSetting);
+        $(pr.element).touchwipe(wipeSetting);
+    }
+
+    // resize window
+    $(window).resize(function(){
+        var html = document.documentElement;
+        var metrics = calcMetrics({fontSize: fontSize});
+        pr.style.left = metrics.left + 'px';
+        pr.style.top = metrics.top + 'px';
+        pr.style.width = metrics.width + 'px';
+        pr.style.height = metrics.height + 'px';
+        pr.style.fontSize = metrics.fontSize + 'px';
+    });
+
+    // handle page number and set to href
+    pr._go  = pr.go;
+    pr.go = function(toIndex) {
+        pr._go(toIndex);
+        if(pr.getPage(toIndex)) {
+            location.href = '#' + $(".section")[toIndex].id; //want to set at paging.
+        }
+    }
+});
+// ]]>
+</script>
+
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="#">s6demo 1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body">
+            
+  <div class="section" id="sphinx">
+<h1>西のほうで「Sphinx朝会」やってきたのさ<a class="headerlink" href="#sphinx" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>お前誰よ?<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>TwitterID : &#64;lab1092</li>
+<li>神戸から来ました。</li>
+<li>今流行りの職業、&#8217;えすいーさん&#8217;</li>
+<li>プログラムとかあまりしない(Excel/Wordと戯れている時間のほうが長い)</li>
+<li>でも <strong>Python</strong> はわりと好きです。</li>
+</ul>
+</div>
+<div class="section" id="id2">
+<h2>Sphinx朝会<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<p>朝もはよからすふいんくすをおべんきょー</p>
+<div class="figure">
+<img alt="_images/sphasa003.jpg" src="_images/sphasa003.jpg" />
+</div>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {'div': {textAlign: 'center'},
+'div/img': {width: '80%'}}});}</script>
+</div>
+<div class="section" id="id3">
+<h2>Sphinx朝会って?<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<p>Sphinx朝会とは</p>
+<ul class="simple">
+<li><strong>Sphinx初心者向け</strong> の</li>
+<li>&#8216;make html&#8217;を体験するための</li>
+<li>(ハンズオン形式の)勉強会みたいなもの</li>
+</ul>
+<p>です。(モヒカンさん向けじゃないよ)</p>
+</div>
+<div class="section" id="id4">
+<h2>3回行いました。<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<p>今回で3回目の実施です。</p>
+<ul class="simple">
+<li>第一回:兵庫・神戸 6名</li>
+<li>第二回:大阪・十三 12名</li>
+<li><strong>第三回:兵庫・神戸</strong> 9名</li>
+</ul>
+</div>
+<div class="section" id="id5">
+<h2>何をやったの?<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<p>3回、演習を中心に基本的なところを。(内容は同じ)</p>
+<ul class="simple">
+<li>Sphinxの環境を作る</li>
+<li>はじめての&#8217;make html&#8217;</li>
+<li>演習問題で学習する</li>
+</ul>
+</div>
+<div class="section" id="id6">
+<h2>こんな感じで。<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {h2: {fontSize:'100%', textAlign:'center', margin:'30% auto'}}});}</script>
+</div>
+<div class="section" id="sphinx1">
+<h2>Sphinxについての紹介1<a class="headerlink" href="#sphinx1" title="Permalink to this headline">¶</a></h2>
+<p><strong>Sphinxとは何か？</strong></p>
+<ul class="simple">
+<li>ドキュメント生成のツール</li>
+<li>reStructuredText記法(Wikiっぽい?</li>
+<li>ページ間のリンクを自動生成</li>
+<li>強力なコードハイライト</li>
+<li>HTML, PDF, ePub, htmlhelp, latex, man...</li>
+</ul>
+</div>
+<div class="section" id="sphinx2">
+<h2>Sphinxについての紹介2<a class="headerlink" href="#sphinx2" title="Permalink to this headline">¶</a></h2>
+<p><strong>reStructuredText記法って?</strong></p>
+<p>シンプルなテキストマークアップです。</p>
+<div class="highlight-rst"><div class="highlight"><pre><span class="gh">Sphinxとは何か？</span>
+<span class="gh">-----------------</span>
+<span class="m">*</span> ドキュメント生成のツール
+<span class="m">*</span> reStructuredText記法(Wikiっぽい?
+<span class="m">*</span> ページ間のリンクを自動生成
+<span class="m">*</span> 強力なコードハイライト
+<span class="m">*</span> HTML, PDF, ePub, htmlhelp, latex, man...
+</pre></div>
+</div>
+</div>
+<div class="section" id="sphinx3">
+<h2>Sphinxについての紹介3<a class="headerlink" href="#sphinx3" title="Permalink to this headline">¶</a></h2>
+<p><strong>何が嬉しい?</strong></p>
+<p>Sphinxでドキュメントを書くと…</p>
+<ul class="simple">
+<li>テキストエディタでサクサク書ける</li>
+<li>文書の構造を保ってシンプルに書ける</li>
+<li>強力なSphinx拡張も使える</li>
+<li>様々なOSで動作</li>
+</ul>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {'ul/li': {display:'none'}}});}</script>
+<script>
+if(typeof s6 != 'undefined'){s6.page({actions: [['ul/li[0]', 'fade in', '0.3'],
+['ul/li[1]', 'fade in', '0.3'],
+['ul/li[2]', 'fade in', '0.3'],
+['ul/li[3]', 'fade in', '0.3']]});}</script>
+</div>
+<div class="section" id="sphinx4">
+<h2>Sphinxについての紹介4<a class="headerlink" href="#sphinx4" title="Permalink to this headline">¶</a></h2>
+<p><strong>テキストエディタでサクサク</strong></p>
+<p>何せテキストなので、</p>
+<ul class="simple">
+<li>GitなどのVCSで管理可能</li>
+<li>コピペし放題（?）</li>
+<li>テキストエディタ上の見栄えが崩れにくいマークアップ</li>
+</ul>
+</div>
+<div class="section" id="sphinx5">
+<h2>Sphinxについての紹介5<a class="headerlink" href="#sphinx5" title="Permalink to this headline">¶</a></h2>
+<p><strong>シンプルに書ける</strong></p>
+<ul class="simple">
+<li>マークアップはシンプル。</li>
+<li>インデントと改行が文書構造を表現</li>
+</ul>
+</div>
+<div class="section" id="sphinx6">
+<h2>Sphinxについての紹介6<a class="headerlink" href="#sphinx6" title="Permalink to this headline">¶</a></h2>
+<p><strong>強力なSphinx拡張</strong></p>
+<p>reSTructuredTextでなく、 <strong>Sphinx</strong> である必要。</p>
+<ul class="simple">
+<li>コードハイライト(pygments)</li>
+<li>拡張テーマ(bizstyle,S6,etc...)</li>
+<li>blockdiag等</li>
+</ul>
+</div>
+<div class="section" id="sphinx7">
+<h2>Sphinxについての紹介7<a class="headerlink" href="#sphinx7" title="Permalink to this headline">¶</a></h2>
+<p><strong>情報も充実のSphinx-Usres.jp。</strong></p>
+<p>日本のコミュニティが活発。</p>
+<ul class="simple">
+<li>ユーザーグループのページ</li>
+<li>メーリングリスト</li>
+</ul>
+</div>
+<div class="section" id="sphinx-pyfes">
+<h2>…Sphinx、皆さんご存知ですよね？ <strong>Pyfes</strong> 来てるくらいだし<a class="headerlink" href="#sphinx-pyfes" title="Permalink to this headline">¶</a></h2>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {h2: {fontSize:'100%', textAlign:'center', margin:'30% auto'}}});}</script>
+</div>
+<div class="section" id="id7">
+<h2>やってみて気付いたこと<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>大阪に需要あり、神戸だと少し遠いっぽい。</li>
+<li>意外な参加者</li>
+<li>Macは意外と環境構築が大変</li>
+</ul>
+</div>
+<div class="section" id="id8">
+<h2>意外な参加者<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<p>非Pythonistaの参加が多かった(ex. PHPer)</p>
+<ul class="simple">
+<li>PHPer 多かったよ</li>
+<li>3回目神戸の時は3/9がPythonista</li>
+<li>朝早いのはなんとかなりそう</li>
+<li>みんなドキュメントに苦労してるみたい</li>
+</ul>
+</div>
+<div class="section" id="id9">
+<h2>次は?<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>多分大阪。</li>
+<li>4月中にはやりたいなー</li>
+<li>今度は実践編的何か</li>
+<li>ネタください(つーか講師やってください)</li>
+<li>よろしくおねがいします。</li>
+</ul>
+</div>
+<div class="section" id="id10">
+<h2>宣伝してもいいですか？<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h2>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {h2: {fontSize:'100%', textAlign:'center', margin:'30% auto'}}});}</script>
+</div>
+<div class="section" id="it">
+<h2>神戸ITフェスティバル<a class="headerlink" href="#it" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://kobe-it-fes.org/">http://kobe-it-fes.org/</a></p>
+<ul class="simple">
+<li>昨年動員(1日) 700名超</li>
+<li>10月5日(金)、10月6日(土) -&gt; 1,500?</li>
+</ul>
+<div class="figure">
+<img alt="_images/kobeitfes2011_logo.jpg" src="_images/kobeitfes2011_logo.jpg" />
+</div>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {'div': {textAlign: 'right'},
+'div/img': {width: '25%'}}});}</script>
+</div>
+<div class="section" id="blug-jp">
+<h2>BLUG.jp<a class="headerlink" href="#blug-jp" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://blug.jp/">http://blug.jp/</a></p>
+<ul class="simple">
+<li>「ぶるぐじぇいぴー」と読みます。</li>
+<li>blender のユーザーグループです。</li>
+<li>今日のOSC東京にもブース出してます</li>
+</ul>
+<div class="figure">
+<img alt="_images/blugjp_card.jpg" src="_images/blugjp_card.jpg" />
+</div>
+<script>
+if(typeof s6 != 'undefined'){s6.page({styles: {'div': {textAlign: 'right'},
+'div/img': {width: '30%'}}});}</script>
+</div>
+<div class="section" id="thanks-for-watching">
+<h2>Thanks for watching!!<a class="headerlink" href="#thanks-for-watching" title="Permalink to this headline">¶</a></h2>
+<p>ホントはBlenderやりたいんだよね…</p>
+<div align='center'><iframe width="560" height="315" src="http://www.youtube.com/embed/Z8cUMsQFHp4" frameborder="0" allowfullscreen></iframe></div></div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="#">s6demo 1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+<div class="footer">
+    <span>西のほうで「Sphinx朝会」やってきたのさ :: 2012, na</span><br />
+    <span class="hidden">操作方法: 上下左右キーで操作です</span>
+</div>
+
+  </body>
+</html>
